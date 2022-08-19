@@ -1,0 +1,343 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © hajixde
+
+//@version=5
+indicator("Ichimoku Screener", overlay = false,  max_bars_back = 500, precision = 2)
+
+
+conversionPeriods = input.int(9, minval=1, title="Conversion Line Length", group = "ichimoku")
+basePeriods = input.int(26, minval=1, title="Base Line Length", group = "ichimoku")
+laggingSpan2Periods = input.int(52, minval=1, title="Leading Span B Length", group = "ichimoku")
+displacement = input.int(26, minval=1, title="Displacement", group = "ichimoku")
+
+green = color.rgb(67, 160, 71, 10)
+red = color.rgb(244, 67, 54, 10)
+brightGreen = color.rgb(57, 220, 57, 0)
+brightRed = color.rgb(220, 20, 20, 0)
+gray = color.gray
+
+
+statColor() =>
+
+    
+   
+    conversionLine = math.avg(ta.lowest(conversionPeriods), ta.highest(conversionPeriods))
+    baseLine = math.avg(ta.lowest(basePeriods), ta.highest(basePeriods))
+    leadLine1 = math.avg(conversionLine, baseLine)
+    leadLine2 = math.avg(ta.lowest(laggingSpan2Periods), ta.highest(laggingSpan2Periods))
+    
+     
+    
+    
+    //Next cloud color
+    NextcloudColor = color.white
+    int barsSinceNextCloudeColor= 0
+    x1 = ta.barssince(not(leadLine1 > leadLine2))
+    x2 = ta.barssince(leadLine1 > leadLine2)
+    if leadLine1 > leadLine2
+        NextcloudColor :=green
+        barsSinceNextCloudeColor := x1
+    // if leadLine1 < leadLine2
+    else
+        NextcloudColor := red
+        barsSinceNextCloudeColor := x2
+
+
+    //Next cloud lines direction
+    closeAboveCloud = color.white
+    int barsSinceCloseAboveCloud = 0
+    y1 = ta.barssince( leadLine1[1]>leadLine1 and leadLine2[1]>leadLine2)
+    y2 = ta.barssince( leadLine1[1]<leadLine1 and leadLine2[1]<leadLine2)
+    if NextcloudColor==green 
+        closeAboveCloud :=green 
+        barsSinceCloseAboveCloud := y2
+    // if NextcloudColor==red and leadLine1[1]>leadLine1 and leadLine2[1]>leadLine2
+    if NextcloudColor==red     
+        closeAboveCloud := red
+        barsSinceCloseAboveCloud := y1
+   
+    
+    // Price above cloud
+    cloudColor = color.white
+    int barsSinceColorChange = 0
+    if not (close <= leadLine1[displacement] and close <= leadLine2[displacement]) and not (close >= leadLine1[displacement] and close >= leadLine2[displacement]) and not (open <= leadLine1[displacement] and open <= leadLine2[displacement]) and not (open >= leadLine1[displacement] and open >= leadLine2[displacement])
+        barsSinceColorChange := -1
+        cloudColor := gray
+    else
+        y1 = ta.barssince(close < leadLine1[displacement] or close < leadLine2[displacement] or open < leadLine1[displacement] or open < leadLine2[displacement])
+        y2 = ta.barssince(close > leadLine1[displacement] or close > leadLine2[displacement] or open > leadLine1[displacement] or open > leadLine2[displacement])
+        if close > leadLine1[displacement] and close > leadLine2[displacement] and open > leadLine1[displacement] and open > leadLine2[displacement]
+            cloudColor :=green
+            barsSinceColorChange := y1
+        else
+            cloudColor := red
+            barsSinceColorChange := y2
+    
+    //chiko clear
+    closeClear = color.white
+    int barsSinceCloseAboveClear = 0
+    if not (close <= leadLine1[displacement*2] and close <= leadLine2[displacement*2]) and not (close >= leadLine1[displacement*2] and close >= leadLine2[displacement*2])
+        closeClear := gray
+    else
+        w1 = ta.barssince(close <= leadLine1[displacement*2] or close <= leadLine2[displacement*2] or close<=conversionLine[26] or close<=baseLine[26] or close<=close[26] or close<=open[26])
+        w2 = ta.barssince(close >= leadLine1[displacement*2] or close >= leadLine2[displacement*2] or close>=conversionLine[26] or close>=baseLine[26]or close>=close[26] or close>=open[26])
+        if close > leadLine1[displacement*2] and close > leadLine2[displacement*2] and close>conversionLine[26] and close>baseLine[26] and  close>close[26] and close>open[26]
+            closeClear :=green
+            barsSinceCloseAboveClear := w1
+        else
+            closeClear := red
+            barsSinceCloseAboveClear := w2
+    
+    // closeClear = color.white
+    // int barsSinceCloseAboveClear = 0
+    // w1 = ta.barssince(laggingSpan2Periods <= leadLine1[displacement*2] or laggingSpan2Periods <= leadLine2[displacement*2] or laggingSpan2Periods<=conversionLine[26] or laggingSpan2Periods<=baseLine[26] or laggingSpan2Periods<=close[26] or laggingSpan2Periods<=open[26] )
+    // w2 = ta.barssince(laggingSpan2Periods >= leadLine1[displacement*2] or laggingSpan2Periods >= leadLine2[displacement*2] or laggingSpan2Periods>=conversionLine[26] or laggingSpan2Periods>=baseLine[26] or laggingSpan2Periods>=close[26] or laggingSpan2Periods>=open[26])
+    // if laggingSpan2Periods > close[26] and laggingSpan2Periods > open[26] and laggingSpan2Periods>conversionLine[26] and laggingSpan2Periods>baseLine[26] and laggingSpan2Periods>leadLine1[displacement*2] and laggingSpan2Periods>leadLine2[displacement*2]
+    //     closeClear :=green
+    //     barsSinceCloseAboveClear := w1
+    // else
+    //     closeClear := red
+    //     barsSinceCloseAboveClear := w2  
+      
+      
+      
+        
+    // 2 lines 
+    z1 = ta.barssince(conversionLine < baseLine)
+    z2 = ta.barssince( conversionLine > baseLine)
+    int barsSinceConvAboveBase = 0
+    convAboveBaseColor = color.white
+    if conversionLine > baseLine 
+        convAboveBaseColor :=green
+        barsSinceConvAboveBase := z1 //  ( ( conversionLine<leadLine1[displacement] and  baseLine<leadLine1[displacement] ) or ( conversionLine<leadLine2[displacement] and baseLine<leadLine2[displacement] ) )
+    // if conversionLine < baseLine and ((conversionLine>leadLine1[displacement] and conversionLine<leadLine2[displacement]  and baseLine>leadLine1[displacement] and baseLine<leadLine2[displacement]) or (conversionLine>leadLine2[displacement] and conversionLine<leadLine1[displacement]  and baseLine>leadLine2[displacement] and baseLine<leadLine1[displacement]) or (conversionLine<leadLine1[displacement] and conversionLine<leadLine2[displacement]  and baseLine<leadLine1[displacement] and baseLine<leadLine2[displacement]))
+    else
+        convAboveBaseColor := red
+        barsSinceConvAboveBase := z2
+    
+    
+    
+  
+    convAboveBaseColorCloud = color.white
+    int barsSinceConvAboveBaseCloud = 0
+    d1=ta.barssince(not(((conversionLine>leadLine1[displacement] and  baseLine>leadLine1[displacement])  or (conversionLine>leadLine2[displacement] and  baseLine>leadLine2[displacement]))))
+    d2=ta.barssince( ((conversionLine>leadLine1[displacement] or  baseLine>leadLine1[displacement])  and (conversionLine>leadLine2[displacement] or  baseLine>leadLine2[displacement])  ))
+    if  ((conversionLine>leadLine1[displacement] and  baseLine>leadLine1[displacement])  or (conversionLine>leadLine2[displacement] and  baseLine>leadLine2[displacement])  )
+        convAboveBaseColorCloud:=green
+        barsSinceConvAboveBaseCloud:=d1
+    if ((conversionLine<leadLine1[displacement] and  baseLine<leadLine1[displacement])  or (conversionLine<leadLine2[displacement] and  baseLine<leadLine2[displacement])  ) 
+        convAboveBaseColorCloud:=red
+        barsSinceConvAboveBaseCloud:=d2
+   
+   
+   
+ 
+    
+    
+    //2lines direction
+    convBaseDirection = color.white
+    int barsSinceConvBaseDirection = 0
+    e1=ta.barssince(not(conversionLine[1]<conversionLine and baseLine[1]<baseLine))
+    e2=ta.barssince(not(conversionLine[1]>conversionLine and baseLine[1]>baseLine))
+    if  conversionLine[1]<conversionLine and baseLine[1]<baseLine
+        convBaseDirection:=green
+        barsSinceConvBaseDirection:=e1
+    if  conversionLine[1]>conversionLine and baseLine[1]>baseLine
+    // else
+        convBaseDirection:=red
+        barsSinceConvBaseDirection:=e2
+
+    
+    [cloudColor, closeAboveCloud, convAboveBaseColor,convAboveBaseColorCloud,NextcloudColor,convBaseDirection,closeClear, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud,barsSinceNextCloudeColor,barsSinceConvBaseDirection,barsSinceCloseAboveClear]
+
+
+
+checkStat(coin) =>
+    [cloudColor, closeAboveCloud, convAboveBaseColor,convAboveBaseColorCloud,NextcloudColor,convBaseDirection,closeClear, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud,barsSinceNextCloudeColor,barsSinceConvBaseDirection,barsSinceCloseAboveClear] = request.security(coin, timeframe.period, statColor())
+    [cloudColor, closeAboveCloud, convAboveBaseColor,convAboveBaseColorCloud,NextcloudColor,convBaseDirection,closeClear, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud,barsSinceNextCloudeColor,barsSinceConvBaseDirection,barsSinceCloseAboveClear]
+
+
+coin1 = input.string("BTCUSDTPERP", group = "Coins" , inline = "coins_")
+coin2 = input.string("ETHUSDTPERP", group = "Coins" , inline = "coins_")
+coin3 = input.string("NEARUSDTPERP", group = "Coins" , inline = "coins_")
+coin4 = input.string("SOLUSDTPERP", group = "Coins" , inline = "coins_")
+coin5 = input.string("MATICUSDTPERP", group = "Coins" , inline = "coins_")
+coin6 = input.string("ATOMUSDTPERP", group = "Coins" , inline = "coins_")
+coin7 = input.string("NFTUSDTPERP", group = "Coins" , inline = "coins_")
+coin8 = input.string("NEARUSDTPERP", group = "Coins" , inline = "coins_")
+coin9 = input.string("ALICEUSDTPERP", group = "Coins" , inline = "coins_")
+coin10 = input.string("DOGEUSDTPERP", group = "Coins" , inline = "coins_")
+coin11 = input.string("DOGEUSDTPERP", group = "Coins" , inline = "coins_")
+// coin11 = input.string("CTKUSDT", group = "Coins" , inline = "coins_")
+coin12 = input.string("BORINGUSDT", group = "Coins" , inline = "coins_")
+coin13 = input.string("DOGEUSDTPERP", group = "Coins" , inline = "coins_")
+coin14 = input.string("SHIBUSDTPERP", group = "Coins" , inline = "coins_")
+coin15 = input.string("LAMBUSDT", group = "Coins" , inline = "coins_")
+coin16 = input.string("AAVEUSDTPERP", group = "Coins" , inline = "coins_")
+coin17 = input.string("MATICUSDTPERP", group = "Coins" , inline = "coins_")
+coin18 = input.string("JSTUSDTPERP", group = "Coins" , inline = "coins_")
+coin19 = input.string("ADAUSDTPERP", group = "Coins" , inline = "coins_")
+coin20 = input.string("TRXUSDTPERP", group = "Coins" , inline = "coins_")
+
+
+
+var table statTable = table.new(position.middle_center, 20, 11,  bgcolor = color.black, frame_width = 1, frame_color = color.black, border_color = color.black, border_width = 1)
+table.cell(statTable, 0, 0, "Coin", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 1, 0, "قیمت\nبه ابر", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 2, 0, "جهت\nپیشرو", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 3, 0, "کراس دو خط\n", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 4, 0, "Entry", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 5, 0, "موقعیت\n دو خط", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 6, 0, "رنگ\nابر\nپیشرو", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 7, 0, "جهت\nدو\nخط", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 8, 0, "چیکو\nکلیر", text_color = color.white, bgcolor = #336688)
+
+
+table.cell(statTable, 9, 0, "Coin", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 10 ,0, "قیمت\nبه ابر", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 11,0,"جهت\nپیشرو", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 12,0, "کراس دو خط\n", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 13, 0, "Entry", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 14, 0, "موقعیت\n دو خط", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 15, 0, "رنگ\nابر\nپیشرو", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 16, 0, "جهت\nدو\nخط", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 17, 0, "چیکو\nکلیر", text_color = color.white, bgcolor = #336688)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+table.cell(statTable, 0, 1, coin1, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 2, coin2, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 3, coin3, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 4, coin4, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 5, coin5, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 6, coin6, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 7, coin7, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 8, coin8, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 9, coin9, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 10, coin10, text_color = color.white, bgcolor = #9999EE)
+
+
+
+table.cell(statTable, 9, 1, coin11, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 2, coin12, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 3, coin13, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 4, coin14, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 5, coin15, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 6, coin16, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 7, coin17, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 8, coin18, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 9, coin19, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 9, 10, coin20, text_color = color.white, bgcolor = #9999EE)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+  
+calcStatAndFill(coin, yPos, xPos) =>
+    [cloudColor, closeAboveCloud, convAboveBaseColor,convAboveBaseColorCloud,convBaseDirection,NextcloudColor,closeClear, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud,barsSinceConvBaseDirection,barsSinceNextCloudeColor,barsSinceCloseAboveClear] = checkStat(coin)
+    
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceNextCloudeColor), text_color = color.white, bgcolor = NextcloudColor)
+    if barsSinceNextCloudeColor == -1
+        table.cell(statTable, yPos+6, xPos, "-", text_color = color.white, bgcolor = NextcloudColor)
+    else
+        table.cell(statTable, yPos+6, xPos, str.tostring(barsSinceNextCloudeColor), text_color = color.white, bgcolor = NextcloudColor)
+ 
+    
+    
+    // table.cell(statTable, yPos, xPos, str.tostring(barsSinceConvBaseDirection), text_color = color.white, bgcolor = convBaseDirection)
+    // if barsSinceConvBaseDirection == -1
+    //     table.cell(statTable, yPos+5, xPos, "-", text_color = color.white, bgcolor = convBaseDirection)
+    // else
+    //     table.cell(statTable, yPos+5, xPos, str.tostring(barsSinceConvBaseDirection), text_color = color.white, bgcolor = convBaseDirection)
+ 
+           
+    
+    
+    
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceConvBaseDirection), text_color = color.white, bgcolor = convBaseDirection)
+    if barsSinceConvBaseDirection == -1
+        table.cell(statTable, yPos+5, xPos, "-", text_color = color.white, bgcolor = convBaseDirection)
+    else
+        table.cell(statTable, yPos+5, xPos, str.tostring(barsSinceConvBaseDirection), text_color = color.white, bgcolor = convBaseDirection)
+ 
+    
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceCloseAboveClear), text_color = color.white, bgcolor = closeClear)
+    if barsSinceCloseAboveClear == -1
+        table.cell(statTable, yPos+7, xPos, "-", text_color = color.white, bgcolor = closeClear)
+    else
+        table.cell(statTable, yPos+7, xPos, str.tostring(barsSinceCloseAboveClear), text_color = color.white, bgcolor = closeClear)
+       
+    
+    
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceColorChange), text_color = color.white, bgcolor = cloudColor)
+    if barsSinceCloseAboveCloud == -1
+        table.cell(statTable, yPos+1, xPos, "-", text_color = color.white, bgcolor = closeAboveCloud)
+    else
+        table.cell(statTable, yPos+1, xPos, str.tostring(barsSinceCloseAboveCloud), text_color = color.white, bgcolor = closeAboveCloud)
+    table.cell(statTable, yPos+2, xPos, str.tostring(barsSinceConvAboveBase), text_color = color.white, bgcolor = convAboveBaseColor)
+    
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceColorChange), text_color = color.white, bgcolor = cloudColor)
+    if barsSinceCloseAboveCloud == -1
+        table.cell(statTable, yPos+1, xPos, "-", text_color = color.white, bgcolor = closeAboveCloud)
+    else
+        table.cell(statTable, yPos+1, xPos, str.tostring(barsSinceCloseAboveCloud), text_color = color.white, bgcolor = closeAboveCloud)
+    table.cell(statTable, yPos+2, xPos, str.tostring(barsSinceConvAboveBase), text_color = color.white, bgcolor = convAboveBaseColor)
+    
+    
+
+ 
+ 
+    color entryColor = na
+    msg = "N/A"
+    table.cell(statTable, yPos+4, xPos, str.tostring(barsSinceConvAboveBaseCloud), text_color = color.white, bgcolor = convAboveBaseColorCloud)
+    if cloudColor == red and convAboveBaseColor == red and closeAboveCloud == red and convAboveBaseColorCloud==red
+        period = math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud)
+        if period <= 1
+            entryColor := brightRed
+        else
+            entryColor := red
+        msg := "S: " + str.tostring(period)
+    
+    if cloudColor == green and convAboveBaseColor == green and closeAboveCloud == green and convAboveBaseColorCloud==green
+        period = math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud)
+        if period <= 1
+            entryColor := brightGreen
+        else
+            entryColor := green
+        msg := "L: " + str.tostring(period)
+    
+    table.cell(statTable, yPos+3, xPos, msg, text_color = color.white, bgcolor = entryColor)
+    start = false
+    if cloudColor == green and closeAboveCloud == green and convAboveBaseColor == green and convAboveBaseColorCloud==green and math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase,barsSinceConvAboveBaseCloud) <= 1
+        start := true
+    start
+
+startRamp = false
+startRamp := startRamp or calcStatAndFill(coin1, 1, 1)
+startRamp := startRamp or calcStatAndFill(coin2, 1, 2)
+startRamp := startRamp or calcStatAndFill(coin3, 1, 3)
+startRamp := startRamp or calcStatAndFill(coin4, 1, 4)
+startRamp := startRamp or calcStatAndFill(coin5, 1, 5)
+startRamp := startRamp or calcStatAndFill(coin6, 1, 6)
+startRamp := startRamp or calcStatAndFill(coin7, 1, 7)
+startRamp := startRamp or calcStatAndFill(coin8, 1, 8)
+startRamp := startRamp or calcStatAndFill(coin9, 1, 9)
+startRamp := startRamp or calcStatAndFill(coin10, 1, 10)
+
+
+
+
+startRamp := startRamp or calcStatAndFill(coin11, 10, 1)
+startRamp := startRamp or calcStatAndFill(coin12, 10, 2)
+startRamp := startRamp or calcStatAndFill(coin13, 10, 3)
+startRamp := startRamp or calcStatAndFill(coin14, 10, 4)
+startRamp := startRamp or calcStatAndFill(coin15, 10, 5)
+startRamp := startRamp or calcStatAndFill(coin16, 10, 6)
+startRamp := startRamp or calcStatAndFill(coin17, 10, 7)
+startRamp := startRamp or calcStatAndFill(coin18, 10, 8)
+startRamp := startRamp or calcStatAndFill(coin19, 10, 9)
+startRamp := startRamp or calcStatAndFill(coin20, 10, 10)
+
+
+
+alertcondition(startRamp, "Buy", "Buy")

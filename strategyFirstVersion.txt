@@ -1,0 +1,268 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © hajixde
+
+//@version=5
+indicator("Ichimoku Screener", overlay = false,  max_bars_back = 500, precision = 2)
+
+
+conversionPeriods = input.int(9, minval=1, title="Conversion Line Length", group = "ichimoku")
+basePeriods = input.int(26, minval=1, title="Base Line Length", group = "ichimoku")
+laggingSpan2Periods = input.int(52, minval=1, title="Leading Span B Length", group = "ichimoku")
+displacement = input.int(26, minval=1, title="Displacement", group = "ichimoku")
+
+green = color.rgb(67, 160, 71, 10)
+red = color.rgb(244, 67, 54, 10)
+brightGreen = color.rgb(57, 220, 57, 0)
+brightRed = color.rgb(220, 20, 20, 0)
+gray = color.gray
+
+
+statColor() =>
+
+    
+    //cloud color
+    conversionLine = math.avg(ta.lowest(conversionPeriods), ta.highest(conversionPeriods))
+    baseLine = math.avg(ta.lowest(basePeriods), ta.highest(basePeriods))
+    leadLine1 = math.avg(conversionLine, baseLine)
+    leadLine2 = math.avg(ta.lowest(laggingSpan2Periods), ta.highest(laggingSpan2Periods))
+    // cloudColor = color.white
+    // int barsSinceColorChange = 0
+    // x1 = ta.barssince(not(leadLine1 > leadLine2))
+    // x2 = ta.barssince(leadLine1 > leadLine2)
+    // if leadLine1 > leadLine2
+    //     cloudColor :=green
+    //     barsSinceColorChange := x1
+    // else
+    //     cloudColor := red
+    //     barsSinceColorChange := x2
+//7777777777777777777777777 
+    //cloud color
+
+    closeAboveCloud = color.white
+    int barsSinceCloseAboveCloud = 0
+    y1 = ta.barssince(not(leadLine1 > leadLine2 and leadLine1[1]<leadLine1 and leadLine2[1]<leadLine2))
+    y2 = ta.barssince(leadLine1 > leadLine2 and leadLine1[1]<leadLine1 and leadLine2[1]<leadLine2)
+    if leadLine1 > leadLine2 and leadLine1[1]<leadLine1 and leadLine2[1]<leadLine2
+        closeAboveCloud :=red
+        barsSinceCloseAboveCloud := y1
+    else
+        
+        closeAboveCloud := green
+        barsSinceCloseAboveCloud := y2
+    
+//66666666666666666666666666666666666 
+    
+    //موقت غیر فعلال شده
+    
+    
+    // Price above cloud
+    cloudColor = color.white
+    int barsSinceColorChange = 0
+    if not (close <= leadLine1[displacement*2] and close <= leadLine2[displacement*2]) and not (close >= leadLine1[displacement*2] and close >= leadLine2[displacement*2]) and not (open <= leadLine1[displacement*2] and open <= leadLine2[displacement*2]) and not (open >= leadLine1[displacement*2] and open >= leadLine2[displacement*2])
+        barsSinceColorChange := -1
+        cloudColor := gray
+    else
+        y1 = ta.barssince(close < leadLine1[displacement*2] or close < leadLine2[displacement*2] or open < leadLine1[displacement*2] or open < leadLine2[displacement*2])
+        y2 = ta.barssince(close > leadLine1[displacement*2] or close > leadLine2[displacement*2] or open > leadLine1[displacement*2] or open > leadLine2[displacement*2])
+        if close > leadLine1[displacement*2] and close > leadLine2[displacement*2] and open > leadLine1[displacement*2] and open > leadLine2[displacement*2]
+            cloudColor :=green
+            barsSinceColorChange := y1
+        else
+            cloudColor := red
+            barsSinceColorChange := y2
+    
+    
+    
+ // conversion and baseline
+    z1 = ta.barssince(not(conversionLine > baseLine))
+    z2 = ta.barssince(conversionLine > baseLine)
+    int barsSinceConvAboveBase = 0
+    convAboveBaseColor = color.white
+    if conversionLine > baseLine
+        convAboveBaseColor :=green
+        barsSinceConvAboveBase := z1
+    else
+        convAboveBaseColor := red
+        barsSinceConvAboveBase := z2
+        
+        
+//      // conversion above cloud
+//     cloudColor = color.white
+//     int barsSinceColorChange = 0 //تغغییر کند 
+//     if (convAboveBaseColor==green and conversionLine <= leadLine1[displacement*2] and conversionLine <= leadLine2[displacement*2]) and  (convAboveBaseColor==red and conversionLine >= leadLine1[displacement*2] and conversionLine >= leadLine2[displacement*2]) and (convAboveBaseColor==green and baseLine <= leadLine1[displacement*2] and baseLine <= leadLine2[displacement*2]) and  (convAboveBaseColor==red and baseLine >= leadLine1[displacement*2] and baseLine >= leadLine2[displacement*2])
+//         barsSinceColorChange := -1//تغییر کند
+//         cloudColor := gray
+//     else
+//         y1 = ta.barssince(convAboveBaseColor==red and conversionLine < leadLine1[displacement*2] or conversionLine < leadLine2[displacement*2] or baseLine < leadLine1[displacement*2] or baseLine < leadLine2[displacement*2])
+//         y2 = ta.barssince(convAboveBaseColor==green and conversionLine > leadLine1[displacement*2] or conversionLine > leadLine2[displacement*2] or baseLine > leadLine1[displacement*2] or baseLine >leadLine2[displacement*2])
+//         if convAboveBaseColor==green and conversionLine > leadLine1[displacement*2] or conversionLine > leadLine2[displacement*2] or baseLine > leadLine1[displacement*2] or baseLine >leadLine2[displacement*2]
+//             cloudColor :=green
+//             barsSinceColorChange := y1
+//         else
+//             cloudColor := red
+//             barsSinceColorChange := y2
+    
+    
+    [cloudColor, closeAboveCloud, convAboveBaseColor, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase]
+
+
+
+checkStat(coin) =>
+    [cloudColor, closeAboveCloud, convAboveBaseColor, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase] = request.security(coin, timeframe.period, statColor())
+    [cloudColor, closeAboveCloud, convAboveBaseColor, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase]
+
+
+coin1 = input.string("BTCUSDT", group = "Coins" , inline = "coins_")
+coin2 = input.string("ETHUSDT", group = "Coins" , inline = "coins_")
+coin3 = input.string("NEARUSDT", group = "Coins" , inline = "coins_")
+coin4 = input.string("SOLUSDT", group = "Coins" , inline = "coins_")
+coin5 = input.string("MATICUSDT", group = "Coins" , inline = "coins_")
+coin6 = input.string("ATOMUSDT", group = "Coins" , inline = "coins_")
+coin7 = input.string("NFTUSDT", group = "Coins" , inline = "coins_")
+coin8 = input.string("NEARUSDT", group = "Coins" , inline = "coins_")
+coin9 = input.string("ALICEUSDT", group = "Coins" , inline = "coins_")
+coin10 = input.string("VGXUSDT", group = "Coins" , inline = "coins_")
+coin11 = input.string("CTKUSDT", group = "Coins" , inline = "coins_")
+coin12 = input.string("BORINGUSDT", group = "Coins" , inline = "coins_")
+coin13 = input.string("DOGEUSDT", group = "Coins" , inline = "coins_")
+coin14 = input.string("SHIBUSDT", group = "Coins" , inline = "coins_")
+coin15 = input.string("LAMBUSDT", group = "Coins" , inline = "coins_")
+coin16 = input.string("HTUSDT", group = "Coins" , inline = "coins_")
+coin17 = input.string("MATICUSDT", group = "Coins" , inline = "coins_")
+coin18 = input.string("JSTUSDT", group = "Coins" , inline = "coins_")
+coin19 = input.string("ADAUSDT", group = "Coins" , inline = "coins_")
+coin20 = input.string("TRXUSDT", group = "Coins" , inline = "coins_")
+coin21 = input.string("XRPUSDT", group = "Coins" , inline = "coins_")
+coin22 = input.string("LUNAUSDT", group = "Coins" , inline = "coins_")
+coin23 = input.string("TFUELUSDT", group = "Coins" , inline = "coins_")
+coin24 = input.string("AVAXUSDT", group = "Coins" , inline = "coins_")
+coin25 = input.string("SUNUSDT", group = "Coins" , inline = "coins_")
+coin26 = input.string("SANDUSDT", group = "Coins" , inline = "coins_")
+coin27 = input.string("STEEMUSDT", group = "Coins" , inline = "coins_")
+coin28 = input.string("MANAUSDT", group = "Coins" , inline = "coins_")
+coin29 = input.string("JASMYUSDT", group = "Coins" , inline = "coins_")
+coin30 = input.string("YGGUSDT", group = "Coins" , inline = "coins_")
+
+
+var table statTable = table.new(position.middle_center, 15, 11,  bgcolor = color.black, frame_width = 1, frame_color = color.black, border_color = color.black, border_width = 1)
+table.cell(statTable, 0, 0, "Coin", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 1, 0, "price\ncloud", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 2, 0, "Lagging\n>\ndirection", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 3, 0, "Conv.\n>\nBase", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 4, 0, "Entry", text_color = color.white, bgcolor = #336688)
+
+table.cell(statTable, 5, 0, "Coin", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 6, 0, "price\ncloud", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 7, 0, "Lagging\n>\ndirection", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 8, 0, "Conv.\n>\nBase", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 9, 0, "Entry", text_color = color.white, bgcolor = #336688)
+
+table.cell(statTable, 10, 0, "Coin", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 11, 0, "price\ncloud", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 12, 0, "Lagging\n>\ndirection", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 13, 0, "Conv.\n>\nBase", text_color = color.white, bgcolor = #336688)
+table.cell(statTable, 14, 0, "Entry", text_color = color.white, bgcolor = #336688)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+table.cell(statTable, 0, 1, coin1, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 2, coin2, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 3, coin3, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 4, coin4, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 5, coin5, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 6, coin6, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 7, coin7, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 8, coin8, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 9, coin9, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 0, 10, coin10, text_color = color.white, bgcolor = #9999EE)
+
+table.cell(statTable, 5, 1, coin11, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 2, coin12, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 3, coin13, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 4, coin14, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 5, coin15, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 6, coin16, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 7, coin17, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 8, coin18, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 9, coin19, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 5, 10, coin20, text_color = color.white, bgcolor = #9999EE)
+
+table.cell(statTable, 10, 1, coin21, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 2, coin22, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 3, coin23, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 4, coin24, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 5, coin25, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 6, coin26, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 7, coin27, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 8, coin28, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 9, coin29, text_color = color.white, bgcolor = #9999EE)
+table.cell(statTable, 10, 10, coin30, text_color = color.white, bgcolor = #9999EE)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+calcStatAndFill(coin, yPos, xPos) =>
+    [cloudColor, closeAboveCloud, convAboveBaseColor, barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase] = checkStat(coin)
+    table.cell(statTable, yPos, xPos, str.tostring(barsSinceColorChange), text_color = color.white, bgcolor = cloudColor)
+    if barsSinceCloseAboveCloud == -1
+        table.cell(statTable, yPos+1, xPos, "-", text_color = color.white, bgcolor = closeAboveCloud)
+    else
+        table.cell(statTable, yPos+1, xPos, str.tostring(barsSinceCloseAboveCloud), text_color = color.white, bgcolor = closeAboveCloud)
+    table.cell(statTable, yPos+2, xPos, str.tostring(barsSinceConvAboveBase), text_color = color.white, bgcolor = convAboveBaseColor)
+    color entryColor = na
+    msg = "N/A"
+    if cloudColor == red and convAboveBaseColor == red and closeAboveCloud == red
+        period = math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase)
+        if period <= 1
+            entryColor := brightRed
+        else
+            entryColor := red
+        msg := "S: " + str.tostring(period)
+    
+    if cloudColor == green and convAboveBaseColor == green and closeAboveCloud == green
+        period = math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase)
+        if period <= 1
+            entryColor := brightGreen
+        else
+            entryColor := green
+        msg := "L: " + str.tostring(period)
+    
+    table.cell(statTable, yPos+3, xPos, msg, text_color = color.white, bgcolor = entryColor)
+    start = false
+    if cloudColor == green and closeAboveCloud == green and convAboveBaseColor == green and math.min(barsSinceColorChange, barsSinceCloseAboveCloud, barsSinceConvAboveBase) <= 1
+        start := true
+    start
+
+startRamp = false
+startRamp := startRamp or calcStatAndFill(coin1, 1, 1)
+startRamp := startRamp or calcStatAndFill(coin2, 1, 2)
+startRamp := startRamp or calcStatAndFill(coin3, 1, 3)
+startRamp := startRamp or calcStatAndFill(coin4, 1, 4)
+startRamp := startRamp or calcStatAndFill(coin5, 1, 5)
+startRamp := startRamp or calcStatAndFill(coin6, 1, 6)
+startRamp := startRamp or calcStatAndFill(coin7, 1, 7)
+startRamp := startRamp or calcStatAndFill(coin8, 1, 8)
+startRamp := startRamp or calcStatAndFill(coin9, 1, 9)
+startRamp := startRamp or calcStatAndFill(coin10, 1, 10)
+
+startRamp := startRamp or calcStatAndFill(coin11, 6, 1)
+startRamp := startRamp or calcStatAndFill(coin12, 6, 2)
+startRamp := startRamp or calcStatAndFill(coin13, 6, 3)
+startRamp := startRamp or calcStatAndFill(coin14, 6, 4)
+startRamp := startRamp or calcStatAndFill(coin15, 6, 5)
+startRamp := startRamp or calcStatAndFill(coin16, 6, 6)
+startRamp := startRamp or calcStatAndFill(coin17, 6, 7)
+startRamp := startRamp or calcStatAndFill(coin18, 6, 8)
+startRamp := startRamp or calcStatAndFill(coin19, 6, 9)
+startRamp := startRamp or calcStatAndFill(coin20, 6, 10)
+
+startRamp := startRamp or calcStatAndFill(coin21, 11, 1)
+startRamp := startRamp or calcStatAndFill(coin22, 11, 2)
+startRamp := startRamp or calcStatAndFill(coin23, 11, 3)
+startRamp := startRamp or calcStatAndFill(coin24, 11, 4)
+startRamp := startRamp or calcStatAndFill(coin25, 11, 5)
+startRamp := startRamp or calcStatAndFill(coin26, 11, 6)
+startRamp := startRamp or calcStatAndFill(coin27, 11, 7)
+startRamp := startRamp or calcStatAndFill(coin28, 11, 8)
+startRamp := startRamp or calcStatAndFill(coin29, 11, 9)
+startRamp := startRamp or calcStatAndFill(coin30, 11, 10)
+
+alertcondition(startRamp, "Buy", "Buy")
+ 
